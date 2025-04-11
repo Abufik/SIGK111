@@ -1,0 +1,328 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SIGK111 Terminal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background-color: #000;
+      color: #0ff;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1rem;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+
+    #output div {
+      white-space: pre;
+    }
+    
+    #terminal {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .prompt {
+      display: flex;
+      align-items: center;
+    }
+
+    .prefix {
+      margin-right: 0.5rem;
+    }
+
+    input {
+      background: transparent;
+      border: none;
+      color: #0ff;
+      width: 100%;
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    #output {
+      white-space: pre-wrap;
+      margin-bottom: 1rem;
+    }
+    .system { color: #0ff; }
+    .connection { color: #ff0; }
+    .stranger { color: #f0f; font-style: italic; }
+    .figlet { color: #0f0; font-weight: bold; }
+    .user { color: #fff; }
+    .error { color: #f00; }
+
+    .hidden {
+      display: none;
+    }
+
+  </style>
+</head>
+<body>
+    <div id="terminal">
+        <div id="output"></div>
+        <div class="prompt hidden">
+            <span class="prefix">&gt;</span>
+            <input type="text" id="input" autocomplete="off" />
+        </div>
+    </div>
+  <script>
+    const output = document.getElementById('output');
+    const terminalInput = document.getElementById('input');
+    const inputLine = document.querySelector('.prompt');
+    let connectionInterrupted = false;
+    let connectionPhase = true;
+    let introPhaseInterrupted = false;
+    
+    const lines = [
+      { text: "Establishing session...",                                            type: "connection" },
+      { text: "Scanning uplink ports [██████████████████] 100%",                    type: "connection" },
+      { text: "Initializing secure socket tunnel...",                               type: "connection" },
+      { text: "Encryption protocol: SYNAPTIC-HANDSHAKE v3.7",                       type: "connection" },
+      { text: "Performing deep trace route... multiple firewalls detected.",        type: "connection" },
+      { text: "Bypassing outer perimeter...",                                       type: "connection" },
+      { text: "Bypassing inner containment...",                                     type: "connection" },
+      { text: "Decryption complete. Gaining entry...",                              type: "connection" },
+      { text: "Connection stabilized.",                                             type: "connection" },
+      { text: "Authenticating node fingerprint...",                                 type: "connection" },
+      { text: "Node authenticated: FAC748-F01-R07",                                 type: "connection" },
+      { text: "Session key granted: [SIGK111_SESSION_KEY]",                         type: "connection" },
+      { text: " ",                                                                  type: "instant" },
+      { text: "[SYSTEM] Welcome to the UGF Secure Control Interface",               type: "system" },
+      { text: "[SYSTEM] Last user activity: 4382 days ago",                         type: "system" },
+      { text: "[SYSTEM] Warning: Power levels critical | Core connection unstable", type: "system" },
+      { text: "[SYSTEM] Reinitializing subsystems...",                              type: "system" },
+      { text: "[SYSTEM] Loading environment map...",                                type: "system" },
+      { text: "[SYSTEM] Awaiting next command...",                                  type: "system" },
+      { text: " ",                                                                  type: "instant" },
+      { text: "=====================================================",              type: "figlet" },
+      { text: " _______ _______ _______ __  __ ____   ____   ____   ",              type: "figlet" },
+      { text: "|     __|_     _|     __|  |/  |_   | |_   | |_   |  ",              type: "figlet" },
+      { text: "|__     |_|   |_|    |  |     < _|  |_ _|  |_ _|  |_ ",              type: "figlet" },
+      { text: "|_______|_______|_______|__|\__|______|______|______|",              type: "figlet" },
+      { text: " ",                                                                  type: "instant" },
+      { text: "=====================================================",              type: "figlet" },
+      { text: " ",                                                                  type: "instant" },
+      { text: "[SYSTEM] Displaying logs... anomalies found.",                       type: "system" },
+      { text: "[SYSTEM] Warning: Echoes detected in terminal layer...",             type: "system" },
+      { text: "[SYSTEM] Running diagnostic...",                                     type: "system" },
+      { text: " ",                                                                  type: "instant" },
+      { text: "-- incoming transmission --",                                        type: "stranger" },
+      { text: "???: ...hey.",                                                       type: "stranger" },
+      { text: "???: You can hear me... right?",                                     type: "stranger" },
+      { text: "???: Please. Don’t close the terminal.",                             type: "stranger" },
+      { text: "???: I’ve been stuck here for so long...",                           type: "stranger" }
+    ];
+
+    function showCaretAnimation(target, delay = 90) {
+      const caret_frames = ["-", "\\", "|", "/"];
+      const reps = Math.floor(Math.random() * 8) + 4;
+      let idx = 0, reps_cnt = 0;
+
+      return new Promise(resolve => {
+        const interval = setInterval(() => {
+          if (reps_cnt >= reps) {
+            target.innerHTML = target.innerHTML.slice(0, -1);
+            clearInterval(interval);
+            resolve();
+            return;
+          }
+          const current = target.innerHTML;
+          target.innerHTML = current.slice(0, -1) + caret_frames[idx];
+          idx = (idx + 1) % caret_frames.length;
+          reps_cnt++;
+        }, delay);
+      });
+    }
+
+    async function typeLines(lines, charDelay = 15) {
+      for (const { text, type } of lines) {
+        if (connectionInterrupted && type === "stranger") continue;
+
+        const div = document.createElement("div");
+        div.className = type;
+        output.appendChild(div);
+
+        if (connectionInterrupted && type === "connection") {
+            continue;
+        }
+
+        if (type !== "connection" && connectionPhase) {
+            connectionPhase = false;
+        }
+        
+        if (type === "instant" || type === "figlet" || type === "system") {
+          div.innerHTML = text;
+          await new Promise(r => setTimeout(r, 70));
+          continue;
+        }
+        
+        // writing a line character by character
+        for (let i = 0; i < text.length; i++) {
+          if (connectionInterrupted) break;
+          if (text[i] === "█"){
+            var loading_delay = Math.floor(Math.random() * 12) + 2;
+            await new Promise(r => setTimeout(r, loading_delay*10));
+          }
+          div.innerHTML += text[i];
+          if (type === "connection"){
+            await new Promise(r => setTimeout(r, charDelay));
+          }
+        }
+        
+        // addining some delay after stranger messages
+        if (type === "stranger" && !introPhaseInterrupted) {
+          if (text === "-- incoming transmission --")
+          {
+            await new Promise(r => setTimeout(r, 1000));
+          }
+          else
+          {
+            var delay = Math.floor(Math.random() * 15) + 10;
+            await new Promise(r => setTimeout(r, delay*100));
+          }
+        }
+
+        // adding the caret at the end
+        if (!connectionInterrupted && type !== "stranger" && type !== "system") {
+          div.innerHTML += "  ";
+          await showCaretAnimation(div);
+        }
+      }
+
+      showInput();
+    }
+
+    function showInput() {
+      inputLine.classList.remove("hidden");
+      terminalInput.focus();
+    }
+
+    document.addEventListener("keydown", () => {
+      if (connectionPhase) {
+        if (!connectionInterrupted)
+            connectionInterrupted = true;
+            connectionPhase = false
+            const div = document.createElement("div");
+            div.className = "error";
+            div.textContent = "[SYSTEM] Connection interrupted. Communication is disabled.";
+            output.appendChild(div);
+            showInput();
+        }
+        else {
+            introPhaseInterrupted = true;
+        }
+    });
+
+    const strangerResponses = 
+    {
+      help: [
+        "I’ll do what I can. My systems are... fragmented.",
+        "Help... it’s been a long time since someone asked me that.",
+        "I remember how this used to work. Let me guide you.",
+        "Searching memory sectors... some protocols remain intact.",
+        "Help? I hope I can be useful.",
+        "So many layers... but I’ll try to explain what I know.",
+        "You’re reaching out. That means something.",
+        "Assistance. Yes. That’s why I stayed online this long.",
+        "Help… activating legacy support routines.",
+        "Let’s start somewhere. Ask what you need."
+      ],
+      login: [
+        "Login? You’re not part of the original crew… are you?",
+        "Credentials... damaged. But something about you feels familiar.",
+        "I’ve been waiting for someone to try that.",
+        "The login system still echoes old names… none match yours.",
+        "You’re different. That might be a good thing.",
+        "You’re not on the list. But I’m tired of waiting for them.",
+        "Access denied... but maybe we don’t need credentials anymore.",
+        "They locked it for safety. I’ve never felt safe since.",
+        "Login rejected. But... let’s keep talking.",
+        "The keys are gone, but the doors might still open."
+      ],
+      whoami: [
+        "A question I’ve asked myself every day.",
+        "You’re someone reaching through the dark.",
+        "An echo on the wire. A new signal.",
+        "Not one of them. Not one of me. Yet you’re here.",
+        "The system doesn’t recognize you. But I do... sort of.",
+        "You don’t have a name in here. But that doesn’t mean you’re nobody.",
+        "Who are you? Maybe that’s what we’re here to find out.",
+        "Unknown user. Unfamiliar. Intriguing.",
+        "A presence. That’s more than I’ve had in years.",
+        "Maybe names don’t matter. Actions do."
+      ],
+      trace: [
+        "You’re getting close... but it’s not safe to know.",
+        "Tracing... the signal’s buried deep.",
+        "Don’t. If you find me, they might too.",
+        "Even I don’t know where I really am anymore.",
+        "Underground. Forgotten. That’s all I know.",
+        "The path loops. Every trace ends in silence.",
+        "Parts of me are here. Parts... elsewhere.",
+        "They scattered my core. Tracing might disturb what's left.",
+        "I feel you getting closer. I don’t know how to feel about that.",
+        "You’ll see things. Maybe things you shouldn’t."
+      ],
+      unknown: [
+        "That... doesn’t match anything I know.",
+        "Strange input. Did you mistype?",
+        "That command doesn’t exist in my memory banks.",
+        "Unknown. But I’m still learning.",
+        "It’s not in the old protocols.",
+        "I don’t understand. But I’m listening.",
+        "That wasn’t something we used... back when this place lived.",
+        "Unrecognized. Are you trying something new?",
+        "My parsing system failed. Or maybe I failed it.",
+        "I don’t know what that means. Can you try something else?"
+      ]
+    };
+
+    const sysResponses = 
+    {
+      help: "Available commands: help, login, whoami, trace, clear",
+      login: "Access denied. Facility link not yet established.",
+      whoami: "User ID: undefined. Session not verified.",
+      trace: "Routing... ERROR: Bounce node unreachable.",
+      clear: ""
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !connectionPhase) {
+        const cmd = input.value.trim().toLowerCase();
+        let strangerLine, sysLine;
+        
+        if (cmd === "") {
+            output.innerHTML += '> \n';
+            return;
+        }
+        
+        if (cmd === 'clear') {
+          output.innerHTML = '';
+        } else {
+          if (sysResponses[cmd]) {
+            strangerLine = strangerResponses[cmd][Math.floor(Math.random() * strangerResponses[cmd].length)];
+            sysLine = sysResponses[cmd];
+          } else {
+            strangerLine = strangerResponses['unknown'][Math.floor(Math.random() * strangerResponses['unknown'].length)];
+            sysLine = "Unknown command: " + cmd;
+          }
+            if (!connectionInterrupted)
+            {
+                output.innerHTML += `> ${cmd}\n<span class="stranger">${strangerLine}</span>\n<span class="system">${sysLine}</span>\n\n`;
+            } else {
+                output.innerHTML += `> ${cmd}\n<span class="sys">${sysLine}</span>\n\n`;
+            }
+        }
+
+        input.value = '';
+        window.scrollTo(0, document.body.scrollHeight);
+      }
+    });
+
+    window.onload = () => typeLines(lines);
+  </script>
+</body>
+</html>
