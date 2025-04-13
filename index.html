@@ -44,7 +44,6 @@
 
     #output {
       white-space: pre-wrap;
-      margin-bottom: 1rem;
     }
     .system { color: #0ff; }
     .connection { color: #ff0; }
@@ -163,7 +162,7 @@
             connectionPhase = false;
         }
         
-        if (type === "instant" || type === "figlet" || type === "system") {
+        if (type !== "connection" && type !== "stranger") {
           div.innerHTML = text;
           await new Promise(r => setTimeout(r, 70));
           continue;
@@ -202,7 +201,7 @@
         }
       }
       introPhase = false;
-      showInput();
+      inputLine.classList.remove("hidden");
     }
 
     function showInput() {
@@ -223,7 +222,7 @@
                 div.className = "error";
                 div.textContent = "[SYSTEM] Connection interrupted. Communication disabled.";
                 output.appendChild(div);
-                showInput();
+                inputLine.classList.remove("hidden");
             }
         }
         else {
@@ -233,13 +232,18 @@
 
     document.addEventListener("keydown", DesktopFocus);
     document.addEventListener("mousedown", DesktopFocus);
-
+    terminalInput.addEventListener("focus", scrollToInput);
+    
     function DesktopFocus() {
         if (!connectionPhase && !introPhase) {
             terminalInput.focus();
         }
     };
-    
+
+    function scrollToInput() {
+        inputLine.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+
     const strangerResponses = 
     {
       help: [
@@ -333,15 +337,14 @@
         
         if (cmd === "") {
             output.innerHTML += '> \n';
-            return;
-        }
-        
-        if (cmd === 'clear') {
+        } else if (cmd === 'clear') {
           output.innerHTML = '';
         } else if (cmd === "reconnect") {
             if (!connectionInterrupted){
                 strangerLine = strangerResponses[cmd][Math.floor(Math.random() * strangerResponses[cmd].length)];
                 output.innerHTML += `> ${cmd}\n<span class="stranger">???: ${strangerLine}</span>\n\n`;
+            } else {
+                output.innerHTML += `> ${cmd}\n`
             }
             
             // Create loading line
@@ -361,11 +364,7 @@
                 clearInterval(loadingInterval);
                 location.reload();
             }, 2000);
-
-            return;
-        }
-        
-        else {
+        } else {
             if (sysResponses[cmd] && strangerResponses[cmd]) {
                 strangerLine = strangerResponses[cmd][Math.floor(Math.random() * strangerResponses[cmd].length)];
                 sysLine = sysResponses[cmd];
@@ -380,11 +379,7 @@
                 output.innerHTML += `> ${cmd}\n<span class="sys">[SYSTEM] ${sysLine}</span>\n\n`;
             }
         }
-        
-        //if (cmd === "reconnect") {
-        //    setTimeout(() => location.reload(), 1000);
-        //}
-
+        scrollToInput();
         
         input.value = '';
         window.scrollTo(0, document.body.scrollHeight);
