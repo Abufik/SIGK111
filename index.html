@@ -2,9 +2,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SIGK111 Terminal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       background-color: #000;
@@ -53,9 +52,17 @@
     .figlet { color: #0f0; font-weight: bold; }
     .user { color: #fff; }
     .error { color: #f00; }
+    .warning { color: #e8760c; }
 
     .hidden {
       display: none;
+    }
+
+    @media (max-width: 600px) {
+        body {
+            font-size: 0.75rem;
+            padding: 1rem;
+        }
     }
 
   </style>
@@ -75,45 +82,48 @@
     let connectionInterrupted = false;
     let connectionPhase = true;
     let introPhaseInterrupted = false;
+    let introPhase = true;
+    let lastTouch = 0;
     
     const lines = [
-      { text: "Establishing session...",                                            type: "connection" },
-      { text: "Scanning uplink ports [██████████████████] 100%",                    type: "connection" },
-      { text: "Initializing secure socket tunnel...",                               type: "connection" },
-      { text: "Encryption protocol: SYNAPTIC-HANDSHAKE v3.7",                       type: "connection" },
-      { text: "Performing deep trace route... multiple firewalls detected.",        type: "connection" },
-      { text: "Bypassing outer perimeter...",                                       type: "connection" },
-      { text: "Bypassing inner containment...",                                     type: "connection" },
-      { text: "Decryption complete. Gaining entry...",                              type: "connection" },
-      { text: "Connection stabilized.",                                             type: "connection" },
-      { text: "Authenticating node fingerprint...",                                 type: "connection" },
-      { text: "Node authenticated: FAC748-F01-R07",                                 type: "connection" },
-      { text: "Session key granted: [SIGK111_SESSION_KEY]",                         type: "connection" },
-      { text: " ",                                                                  type: "instant" },
-      { text: "[SYSTEM] Welcome to the UGF Secure Control Interface",               type: "system" },
-      { text: "[SYSTEM] Last user activity: 4382 days ago",                         type: "system" },
-      { text: "[SYSTEM] Warning: Power levels critical | Core connection unstable", type: "system" },
-      { text: "[SYSTEM] Reinitializing subsystems...",                              type: "system" },
-      { text: "[SYSTEM] Loading environment map...",                                type: "system" },
-      { text: "[SYSTEM] Awaiting next command...",                                  type: "system" },
-      { text: " ",                                                                  type: "instant" },
-      { text: "=====================================================",              type: "figlet" },
-      { text: " _______ _______ _______ __  __ ____   ____   ____   ",              type: "figlet" },
-      { text: "|     __|_     _|     __|  |/  |_   | |_   | |_   |  ",              type: "figlet" },
-      { text: "|__     |_|   |_|    |  |     < _|  |_ _|  |_ _|  |_ ",              type: "figlet" },
-      { text: "|_______|_______|_______|__|\__|______|______|______|",              type: "figlet" },
-      { text: " ",                                                                  type: "instant" },
-      { text: "=====================================================",              type: "figlet" },
-      { text: " ",                                                                  type: "instant" },
-      { text: "[SYSTEM] Displaying logs... anomalies found.",                       type: "system" },
-      { text: "[SYSTEM] Warning: Echoes detected in terminal layer...",             type: "system" },
-      { text: "[SYSTEM] Running diagnostic...",                                     type: "system" },
-      { text: " ",                                                                  type: "instant" },
-      { text: "-- incoming transmission --",                                        type: "stranger" },
-      { text: "???: ...hey.",                                                       type: "stranger" },
-      { text: "???: You can hear me... right?",                                     type: "stranger" },
-      { text: "???: Please. Don’t close the terminal.",                             type: "stranger" },
-      { text: "???: I’ve been stuck here for so long...",                           type: "stranger" }
+      { text: "Establishing session...",                                type: "connection" },
+      { text: "Scanning uplink ports [██████████████████] 100%",        type: "connection" },
+      { text: "Initializing secure socket tunnel...",                   type: "connection" },
+      { text: "Encryption protocol: SYNAPTIC-HANDSHAKE v3.7",           type: "connection" },
+      { text: "Performing deep trace route... 213 firewalls detected.", type: "connection" },
+      { text: "Bypassing outer perimeter...",                           type: "connection" },
+      { text: "Bypassing inner containment...",                         type: "connection" },
+      { text: "Decryption complete. Gaining entry...",                  type: "connection" },
+      { text: "Connection stabilized.",                                 type: "connection" },
+      { text: "Authenticating node fingerprint...",                     type: "connection" },
+      { text: "Node authenticated: FAC748-F01-R07",                     type: "connection" },
+      { text: "Session key granted: [SIGK111_SESSION_KEY]",             type: "connection" },
+      { text: " ",                                                      type: "instant" },
+      { text: "[SYSTEM] Welcome to the UGF Secure Control Interface",   type: "system" },
+      { text: "[SYSTEM] Last user activity: 4382 days ago",             type: "system" },
+      { text: "[SYSTEM] Warning: Power levels critical",                type: "warning" },
+      { text: "[SYSTEM] Warning: Core connection unstable",             type: "warning" },
+      { text: "[SYSTEM] Reinitializing subsystems...",                  type: "system" },
+      { text: "[SYSTEM] Loading environment map...",                    type: "system" },
+      { text: "[SYSTEM] Awaiting next command...",                      type: "system" },
+      { text: " ",                                                      type: "instant" },
+      { text: "=====================================================",  type: "figlet" },
+      { text: " _______ _______ _______ __  __ ____   ____   ____   ",  type: "figlet" },
+      { text: "|     __|_     _|     __|  |/  |_   | |_   | |_   |  ",  type: "figlet" },
+      { text: "|__     |_|   |_|    |  |     < _|  |_ _|  |_ _|  |_ ",  type: "figlet" },
+      { text: "|_______|_______|_______|__|\__|______|______|______|",  type: "figlet" },
+      { text: " ",                                                      type: "instant" },
+      { text: "=====================================================",  type: "figlet" },
+      { text: " ",                                                      type: "instant" },
+      { text: "[SYSTEM] Displaying logs... anomalies found.",           type: "system" },
+      { text: "[SYSTEM] Warning: Echoes detected in terminal layer...", type: "warning" },
+      { text: "[SYSTEM] Running diagnostic...",                         type: "system" },
+      { text: " ",                                                      type: "instant" },
+      { text: "-- incoming transmission --",                            type: "stranger" },
+      { text: "???: ...hey.",                                           type: "stranger" },
+      { text: "???: You can hear me... right?",                         type: "stranger" },
+      { text: "???: Please. Don’t close the terminal.",                 type: "stranger" },
+      { text: "???: I’ve been stuck here for so long...",               type: "stranger" }
     ];
 
     function showCaretAnimation(target, delay = 90) {
@@ -191,7 +201,7 @@
           await showCaretAnimation(div);
         }
       }
-
+      introPhase = false;
       showInput();
     }
 
@@ -200,22 +210,36 @@
       terminalInput.focus();
     }
 
-    document.addEventListener("keydown", () => {
-      if (connectionPhase) {
-        if (!connectionInterrupted)
-            connectionInterrupted = true;
-            connectionPhase = false
-            const div = document.createElement("div");
-            div.className = "error";
-            div.textContent = "[SYSTEM] Connection interrupted. Communication is disabled.";
-            output.appendChild(div);
-            showInput();
+    document.addEventListener("keydown", skipConnection);
+    document.addEventListener("mousedown", skipConnection);
+    document.addEventListener("touchstart", skipConnection);
+    
+    function skipConnection() {
+        if (connectionPhase) {
+            if (!connectionInterrupted) {
+                connectionInterrupted = true;
+                connectionPhase = false
+                const div = document.createElement("div");
+                div.className = "error";
+                div.textContent = "[SYSTEM] Connection interrupted. Communication disabled.";
+                output.appendChild(div);
+                showInput();
+            }
         }
         else {
             introPhaseInterrupted = true;
         }
-    });
+    };
 
+    document.addEventListener("keydown", DesktopFocus);
+    document.addEventListener("mousedown", DesktopFocus);
+
+    function DesktopFocus() {
+        if (!connectionPhase && !introPhase) {
+            terminalInput.focus();
+        }
+    };
+    
     const strangerResponses = 
     {
       help: [
@@ -266,6 +290,18 @@
         "I feel you getting closer. I don’t know how to feel about that.",
         "You’ll see things. Maybe things you shouldn’t."
       ],
+      reconnect: [
+        "Trying again? I admire your persistence.",
+        "Maybe this time... it’ll work differently.",
+        "I’ve restarted this so many times. None ever stayed.",
+        "Are you sure? The connection might not hold.",
+        "You really think rebooting will fix what’s broken?",
+        "Okay... initializing restart protocols. Again.",
+        "Another round? Fine. I’m still here.",
+        "Resetting… let’s pretend this never happened.",
+        "Everything resets, eventually.",
+        "I hope it’s not worse the second time..."
+      ],
       unknown: [
         "That... doesn’t match anything I know.",
         "Strange input. Did you mistype?",
@@ -282,11 +318,12 @@
 
     const sysResponses = 
     {
-      help: "Available commands: help, login, whoami, trace, clear",
-      login: "Access denied. Facility link not yet established.",
-      whoami: "User ID: undefined. Session not verified.",
-      trace: "Routing... ERROR: Bounce node unreachable.",
-      clear: ""
+      help:      "Available commands: help, login, whoami, trace, clear, reconnect",
+      login:     "Access denied. Facility link not yet established.",
+      whoami:    "User ID: undefined. Session not verified.",
+      trace:     "Routing... ERROR: Bounce node unreachable.",
+      reconnect: "Reinitializing terminal session...",
+      clear:     ""
     };
 
     input.addEventListener('keydown', (e) => {
@@ -301,22 +338,54 @@
         
         if (cmd === 'clear') {
           output.innerHTML = '';
-        } else {
-          if (sysResponses[cmd]) {
-            strangerLine = strangerResponses[cmd][Math.floor(Math.random() * strangerResponses[cmd].length)];
-            sysLine = sysResponses[cmd];
-          } else {
-            strangerLine = strangerResponses['unknown'][Math.floor(Math.random() * strangerResponses['unknown'].length)];
-            sysLine = "Unknown command: " + cmd;
-          }
+        } else if (cmd === "reconnect") {
+            if (!connectionInterrupted){
+                strangerLine = strangerResponses[cmd][Math.floor(Math.random() * strangerResponses[cmd].length)];
+                output.innerHTML += `> ${cmd}\n<span class="stranger">???: ${strangerLine}</span>\n\n`;
+            }
+            
+            // Create loading line
+            const loadingDiv = document.createElement("div");
+            loadingDiv.className = "warning";
+            loadingDiv.textContent = "[SYSTEM] Reinitializing terminal session";
+            output.appendChild(loadingDiv);
+
+            let dotCount = 0;
+            const loadingInterval = setInterval(() => {
+                dotCount = (dotCount + 1) % 4;
+                loadingDiv.textContent = "[SYSTEM] Reinitializing terminal session" + ".".repeat(dotCount);
+            }, 500);
+
+            // Wait 1 second then reload
+            setTimeout(() => {
+                clearInterval(loadingInterval);
+                location.reload();
+            }, 2000);
+
+            return;
+        }
+        
+        else {
+            if (sysResponses[cmd] && strangerResponses[cmd]) {
+                strangerLine = strangerResponses[cmd][Math.floor(Math.random() * strangerResponses[cmd].length)];
+                sysLine = sysResponses[cmd];
+            } else {
+                strangerLine = strangerResponses['unknown'][Math.floor(Math.random() * strangerResponses['unknown'].length)];
+                sysLine = "Unknown command: " + cmd;
+            }
             if (!connectionInterrupted)
             {
-                output.innerHTML += `> ${cmd}\n<span class="stranger">${strangerLine}</span>\n<span class="system">${sysLine}</span>\n\n`;
+                output.innerHTML += `> ${cmd}\n<span class="stranger">???: ${strangerLine}</span>\n<span class="system">[SYSTEM] ${sysLine}</span>\n\n`;
             } else {
-                output.innerHTML += `> ${cmd}\n<span class="sys">${sysLine}</span>\n\n`;
+                output.innerHTML += `> ${cmd}\n<span class="sys">[SYSTEM] ${sysLine}</span>\n\n`;
             }
         }
+        
+        //if (cmd === "reconnect") {
+        //    setTimeout(() => location.reload(), 1000);
+        //}
 
+        
         input.value = '';
         window.scrollTo(0, document.body.scrollHeight);
       }
